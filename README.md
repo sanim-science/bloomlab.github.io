@@ -1,66 +1,61 @@
 This is the official website for BloomLab 
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { useState } from 'react';
+// Simple BloomLab website using plain JavaScript and HTML (no React)
 
-function App() {
-  return (
-    <Router>
-      <div className="min-h-screen bg-gray-100">
-        <nav className="bg-white shadow p-4 flex justify-between">
-          <h1 className="text-xl font-bold text-blue-600">BloomLab</h1>
-          <div className="space-x-4">
-            <Link to="/" className="text-gray-700 hover:text-blue-600">Home</Link>
-            <Link to="/resources" className="text-gray-700 hover:text-blue-600">Resources</Link>
-            <Link to="/quizzes" className="text-gray-700 hover:text-blue-600">Quizzes</Link>
-          </div>
-        </nav>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/resources" element={<Resources />} />
-          <Route path="/quizzes" element={<Quizzes />} />
-        </Routes>
+const app = document.getElementById('app');
+
+const routes = {
+  '/': renderHome,
+  '/resources': renderResources,
+  '/quizzes': renderQuizzes,
+};
+
+function navigate(path) {
+  window.history.pushState({}, path, window.location.origin + path);
+  routes[path]();
+}
+
+function renderNav() {
+  return `
+    <nav style="display: flex; justify-content: space-between; padding: 1rem; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <h1 style="color: #2563eb; font-weight: bold;">BloomLab</h1>
+      <div style="gap: 1rem; display: flex;">
+        <a href="#" onclick="navigate('/')">Home</a>
+        <a href="#" onclick="navigate('/resources')">Resources</a>
+        <a href="#" onclick="navigate('/quizzes')">Quizzes</a>
       </div>
-    </Router>
-  );
+    </nav>
+  `;
 }
 
-function Home() {
-  return (
-    <div className="p-8 text-center">
-      <h2 className="text-2xl font-semibold mb-4">Welcome to BloomLab</h2>
-      <p className="text-gray-700">Your hub for Physics, Engineering, and Programming resources and challenges.</p>
+function renderHome() {
+  app.innerHTML = `
+    ${renderNav()}
+    <div style="padding: 2rem; text-align: center;">
+      <h2>Welcome to BloomLab</h2>
+      <p>Your hub for Physics, Engineering, and Programming resources and challenges.</p>
     </div>
-  );
+  `;
 }
 
-function Resources() {
+function renderResources() {
   const links = [
     { title: "Khan Academy - Physics", url: "https://www.khanacademy.org/science/physics" },
     { title: "MIT OpenCourseWare - Engineering", url: "https://ocw.mit.edu/courses/find-by-topic/#cat=engineering" },
     { title: "freeCodeCamp - Programming", url: "https://www.freecodecamp.org/" },
   ];
-
-  return (
-    <div className="p-8">
-      <h2 className="text-xl font-bold mb-4">Resources</h2>
-      <ul className="list-disc list-inside space-y-2">
-        {links.map((link, idx) => (
-          <li key={idx}>
-            <a href={link.url} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
-              {link.title}
-            </a>
-          </li>
-        ))}
-      </ul>
+  
+  const listItems = links.map(link => `<li><a href="${link.url}" target="_blank">${link.title}</a></li>`).join('');
+  
+  app.innerHTML = `
+    ${renderNav()}
+    <div style="padding: 2rem;">
+      <h2>Resources</h2>
+      <ul>${listItems}</ul>
     </div>
-  );
+  `;
 }
 
-function Quizzes() {
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [showResult, setShowResult] = useState(false);
-
+function renderQuizzes() {
   const questions = [
     {
       question: "What is the unit of force?",
@@ -79,43 +74,44 @@ function Quizzes() {
     },
   ];
 
-  const handleAnswer = (option) => {
-    if (option === questions[questionIndex].answer) {
-      setScore(score + 1);
-    }
-    const nextIndex = questionIndex + 1;
-    if (nextIndex < questions.length) {
-      setQuestionIndex(nextIndex);
+  let index = 0;
+  let score = 0;
+
+  function showQuestion() {
+    const q = questions[index];
+    const optionsHtml = q.options.map(opt => `<button onclick="checkAnswer('${opt}')">${opt}</button>`).join('<br>');
+    app.innerHTML = `
+      ${renderNav()}
+      <div style="padding: 2rem;">
+        <h2>Quiz</h2>
+        <p>${q.question}</p>
+        ${optionsHtml}
+      </div>
+    `;
+  }
+
+  window.checkAnswer = function (selected) {
+    if (selected === questions[index].answer) score++;
+    index++;
+    if (index < questions.length) {
+      showQuestion();
     } else {
-      setShowResult(true);
+      app.innerHTML = `
+        ${renderNav()}
+        <div style="padding: 2rem;">
+          <h2>Quiz Complete</h2>
+          <p>Your score: ${score} / ${questions.length}</p>
+        </div>
+      `;
     }
   };
 
-  return (
-    <div className="p-8">
-      <h2 className="text-xl font-bold mb-4">Quiz</h2>
-      {!showResult ? (
-        <div>
-          <p className="mb-2">{questions[questionIndex].question}</p>
-          <div className="space-y-2">
-            {questions[questionIndex].options.map((option, idx) => (
-              <button
-                key={idx}
-                className="block w-full bg-white border border-gray-300 rounded px-4 py-2 hover:bg-blue-100"
-                onClick={() => handleAnswer(option)}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div>
-          <p className="text-lg">Your score: {score} / {questions.length}</p>
-        </div>
-      )}
-    </div>
-  );
+  showQuestion();
 }
 
-export default App;
+// Initial load
+window.onpopstate = () => {
+  routes[window.location.pathname]();
+};
+
+navigate('/');
